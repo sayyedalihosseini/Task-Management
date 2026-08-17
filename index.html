@@ -3,13 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Task Flow | مدیریتهشتسی تسک‌ها</title>
+  <title>Task Flow | مدیریت هوشمند تسک‌ها</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
   <style>
-    body { font-family: 'Vazirmatn', sans-serif; }
+    /* غیرفعال کردن انتخاب متن در کل اپ برای حس Native */
+    body { 
+      font-family: 'Vazirmatn', sans-serif; 
+      user-select: none; 
+      -webkit-user-select: none; 
+    }
     .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); }
+    /* استایل بصری هنگام درگ کردن */
+    .drop-zone-active { border-color: #6366f1 !important; background-color: rgba(99, 102, 241, 0.1) !important; }
+    .dragging { opacity: 0.4; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen pb-12">
@@ -30,7 +38,7 @@
           id="task-input" 
           placeholder="افزودن سریع تسک جدید (اینتر بزنید)..." 
           required 
-          class="flex-1 bg-slate-900/80 border border-slate-700/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition placeholder-slate-500"
+          class="flex-1 bg-slate-900/80 border border-slate-700/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition placeholder-slate-500 select-text"
         >
         <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-6 py-3 rounded-xl text-sm transition flex items-center gap-1">
           <span>افزودن</span>
@@ -38,15 +46,15 @@
       </form>
     </section>
 
-    <!-- لیست کلی تسک‌ها (ورودی‌های جدید / بک‌لاگ) -->
+    <!-- ورودی‌های جدید / بک‌لاگ -->
     <section class="space-y-3">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold text-slate-200 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ورودی‌های جدید (لیست کلی تسک‌ها)
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ورودی‌های جدید (ورودی اولیه)
         </h2>
         <span class="text-xs bg-emerald-400/10 text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/20" id="count-backlog">0 تسک</span>
       </div>
-      <div id="slot-backlog" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 min-h-[60px] p-3 bg-slate-900/30 border border-slate-800/60 rounded-2xl"></div>
+      <div id="slot-backlog" data-zone="backlog" class="drop-target grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 min-h-[70px] p-3 bg-slate-900/30 border border-dashed border-slate-800 rounded-2xl transition"></div>
     </section>
 
     <hr class="border-slate-800/80">
@@ -64,7 +72,7 @@
             <span class="font-medium text-amber-400 text-sm">🌅 صبح</span>
             <span class="text-xs bg-amber-400/10 text-amber-400 px-2 py-0.5 rounded" id="count-morning">0</span>
           </div>
-          <div id="slot-morning" class="space-y-2 min-h-[100px] flex-1"></div>
+          <div id="slot-morning" data-zone="morning" class="drop-target space-y-2 min-h-[100px] flex-1 rounded-xl p-1 transition border border-transparent"></div>
         </div>
 
         <!-- ظهر / عصر -->
@@ -73,7 +81,7 @@
             <span class="font-medium text-orange-400 text-sm">☀️ ظهر و عصر</span>
             <span class="text-xs bg-orange-400/10 text-orange-400 px-2 py-0.5 rounded" id="count-afternoon">0</span>
           </div>
-          <div id="slot-afternoon" class="space-y-2 min-h-[100px] flex-1"></div>
+          <div id="slot-afternoon" data-zone="afternoon" class="drop-target space-y-2 min-h-[100px] flex-1 rounded-xl p-1 transition border border-transparent"></div>
         </div>
 
         <!-- شب -->
@@ -82,7 +90,7 @@
             <span class="font-medium text-indigo-400 text-sm">🌙 شب</span>
             <span class="text-xs bg-indigo-400/10 text-indigo-400 px-2 py-0.5 rounded" id="count-evening">0</span>
           </div>
-          <div id="slot-evening" class="space-y-2 min-h-[100px] flex-1"></div>
+          <div id="slot-evening" data-zone="evening" class="drop-target space-y-2 min-h-[100px] flex-1 rounded-xl p-1 transition border border-transparent"></div>
         </div>
 
       </div>
@@ -96,23 +104,23 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         
         <div class="bg-red-950/20 border border-red-900/30 rounded-2xl p-4 space-y-3">
-          <span class="text-xs font-semibold text-red-400 tracking-wide uppercase">🔥 فوری و مهم (انجام بده)</span>
-          <div id="matrix-do" class="space-y-2 min-h-[60px]"></div>
+          <span class="text-xs font-semibold text-red-400 tracking-wide uppercase">🔥 فوری و مهم</span>
+          <div id="matrix-do" data-zone="matrix-do" class="drop-target space-y-2 min-h-[80px] rounded-xl p-1 transition"></div>
         </div>
 
         <div class="bg-blue-950/20 border border-blue-900/30 rounded-2xl p-4 space-y-3">
-          <span class="text-xs font-semibold text-blue-400 tracking-wide uppercase">📅 غیرفوری و مهم (برنامه‌ریزی کن)</span>
-          <div id="matrix-schedule" class="space-y-2 min-h-[60px]"></div>
+          <span class="text-xs font-semibold text-blue-400 tracking-wide uppercase">📅 غیرفوری و مهم</span>
+          <div id="matrix-schedule" data-zone="matrix-schedule" class="drop-target space-y-2 min-h-[80px] rounded-xl p-1 transition"></div>
         </div>
 
         <div class="bg-amber-950/20 border border-amber-900/30 rounded-2xl p-4 space-y-3">
-          <span class="text-xs font-semibold text-amber-400 tracking-wide uppercase">⚡ فوری و غیرمهم (واگذار کن / سریع بزن)</span>
-          <div id="matrix-delegate" class="space-y-2 min-h-[60px]"></div>
+          <span class="text-xs font-semibold text-amber-400 tracking-wide uppercase">⚡ فوری و غیرمهم</span>
+          <div id="matrix-delegate" data-zone="matrix-delegate" class="drop-target space-y-2 min-h-[80px] rounded-xl p-1 transition"></div>
         </div>
 
         <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 space-y-3">
-          <span class="text-xs font-semibold text-slate-400 tracking-wide uppercase">🗑️ غیرفوری و غیرمهم (حذف یا بررسی)</span>
-          <div id="matrix-eliminate" class="space-y-2 min-h-[60px]"></div>
+          <span class="text-xs font-semibold text-slate-400 tracking-wide uppercase">🗑️ غیرفوری و غیرمهم</span>
+          <div id="matrix-eliminate" data-zone="matrix-eliminate" class="drop-target space-y-2 min-h-[80px] rounded-xl p-1 transition"></div>
         </div>
 
       </div>
@@ -121,7 +129,6 @@
   </div>
 
   <script>
-    // اطلاعات Supabase را اینجا بگذار
     const SUPABASE_URL = 'https://qtknpxwjzqgwueuwivga.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0a25weHdqenFnd3VldXdpdmdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzM4ODgsImV4cCI6MjEwMjU0OTg4OH0.GNGDRuH_dqqgD_oi7b2ZdYgcNGzbMxL8Iu3sX_r9BfQ';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -129,58 +136,46 @@
     document.getElementById('current-date').innerText = new Date().toLocaleDateString('fa-IR');
 
     let allTasks = [];
+    let draggedTaskId = null;
 
-    // دریافت تسک‌ها
     async function fetchTasks() {
       const { data, error } = await _supabase
         .from('tasks')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error("خطا در دریافت اطلاعات:", error.message);
-      } else {
+      if (!error) {
         allTasks = data;
         renderTasks();
       }
     }
 
-    // افزودن تسک جدید
     document.getElementById('quick-add-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const input = document.getElementById('task-input');
-  const title = input.value.trim();
-  if (!title) return;
+      e.preventDefault();
+      const input = document.getElementById('task-input');
+      const title = input.value.trim();
+      if (!title) return;
 
-  const { data, error } = await _supabase
-    .from('tasks')
-    .insert([{ title: title, is_important: false, is_urgent: false, time_slot: 'backlog' }]);
+      const { error } = await _supabase
+        .from('tasks')
+        .insert([{ title, is_important: false, is_urgent: false, time_slot: 'backlog' }]);
 
-  if (error) {
-    // نمایش ارور واقعی دیتابیس یا شبکه
-    console.log("Supabase Full Error:", error);
-    alert("خطا: " + (error.message || error.hint || "مشکل اتصال/شبکه"));
-  } else {
-    input.value = '';
-    fetchTasks();
-  }
-});
+      if (!error) {
+        input.value = '';
+        fetchTasks();
+      }
+    });
 
-    // آپدیت تسک
     async function updateTask(id, fields) {
-      const { error } = await _supabase.from('tasks').update(fields).eq('id', id);
-      if (error) console.error(error);
-      else fetchTasks();
+      await _supabase.from('tasks').update(fields).eq('id', id);
+      fetchTasks();
     }
 
-    // حذف تسک
     async function deleteTask(id) {
-      const { error } = await _supabase.from('tasks').delete().eq('id', id);
-      if (error) console.error(error);
-      else fetchTasks();
+      await _supabase.from('tasks').delete().eq('id', id);
+      fetchTasks();
     }
 
-    // رندر بخش‌ها
     function renderTasks() {
       const containers = ['slot-backlog', 'slot-morning', 'slot-afternoon', 'slot-evening', 'matrix-do', 'matrix-schedule', 'matrix-delegate', 'matrix-eliminate'];
       containers.forEach(id => document.getElementById(id).innerHTML = '');
@@ -190,19 +185,14 @@
       allTasks.forEach(task => {
         const card = createCard(task);
 
-        // ۱. اگر زمان‌بندی شده (صبح/ظهر/شب)
         if (task.time_slot !== 'backlog') {
           document.getElementById(`slot-${task.time_slot}`).appendChild(card);
           counts[task.time_slot]++;
-        } 
-        // ۲. اگر زمان‌بندی نشده اما مهم یا فوری شده -> در ماتریس قرار بگیرد
-        else if (task.is_important || task.is_urgent) {
+        } else if (task.is_important || task.is_urgent) {
           if (task.is_important && task.is_urgent) document.getElementById('matrix-do').appendChild(card);
           else if (task.is_important && !task.is_urgent) document.getElementById('matrix-schedule').appendChild(card);
           else if (!task.is_important && task.is_urgent) document.getElementById('matrix-delegate').appendChild(card);
-        }
-        // ۳. در غیر این صورت -> در لیست ورودی‌های جدید (Backlog) نمایش بده
-        else {
+        } else {
           document.getElementById('slot-backlog').appendChild(card);
           counts.backlog++;
         }
@@ -212,34 +202,76 @@
       document.getElementById('count-morning').innerText = counts.morning;
       document.getElementById('count-afternoon').innerText = counts.afternoon;
       document.getElementById('count-evening').innerText = counts.evening;
+
+      setupDragAndDrop();
     }
 
-    // ساخت کارت تسک
     function createCard(task) {
       const card = document.createElement('div');
-      card.className = `p-3 bg-slate-900 border ${task.is_completed ? 'border-emerald-900/40 opacity-50' : 'border-slate-800'} rounded-xl space-y-2 shadow-sm text-xs`;
+      card.draggable = true;
+      card.dataset.id = task.id;
+      card.className = `p-3 bg-slate-900 border ${task.is_completed ? 'border-emerald-900/40 opacity-50' : 'border-slate-800'} rounded-xl space-y-2 shadow-sm text-xs cursor-grab active:cursor-grabbing transition`;
 
       card.innerHTML = `
         <div class="flex items-center justify-between gap-2">
-          <span class="${task.is_completed ? 'line-through text-slate-500' : 'text-slate-200 font-medium'} flex-1">${task.title}</span>
+          <span class="${task.is_completed ? 'line-through text-slate-500' : 'text-slate-200 font-medium'} flex-1 pointer-events-none">${task.title}</span>
           <button onclick="deleteTask('${task.id}')" class="text-slate-600 hover:text-red-400 transition px-1">✕</button>
-        </div>
-        
-        <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 gap-1 flex-wrap">
-          <div class="flex gap-1">
-            <button onclick="updateTask('${task.id}', {is_important: ${!task.is_important}})" class="px-2 py-0.5 rounded border ${task.is_important ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' : 'border-slate-800 text-slate-500'}">مهم</button>
-            <button onclick="updateTask('${task.id}', {is_urgent: ${!task.is_urgent}})" class="px-2 py-0.5 rounded border ${task.is_urgent ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'border-slate-800 text-slate-500'}">فوری</button>
-          </div>
-
-          <select onchange="updateTask('${task.id}', {time_slot: this.value})" class="bg-slate-950 border border-slate-800 text-slate-300 text-[11px] rounded px-1.5 py-0.5 focus:outline-none">
-            <option value="backlog" ${task.time_slot === 'backlog' ? 'selected' : ''}>— بک‌لاگ —</option>
-            <option value="morning" ${task.time_slot === 'morning' ? 'selected' : ''}>🌅 صبح</option>
-            <option value="afternoon" ${task.time_slot === 'afternoon' ? 'selected' : ''}>☀️ ظهر</option>
-            <option value="evening" ${task.time_slot === 'evening' ? 'selected' : ''}>🌙 شب</option>
-          </select>
         </div>
       `;
       return card;
+    }
+
+    // منطق کشیدن و رها کردن (Drag and Drop)
+    function setupDragAndDrop() {
+      const cards = document.querySelectorAll('[draggable="true"]');
+      const dropTargets = document.querySelectorAll('.drop-target');
+
+      cards.forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          draggedTaskId = card.dataset.id;
+          card.classList.add('dragging');
+          e.dataTransfer.setData('text/plain', card.dataset.id);
+        });
+
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+        });
+      });
+
+      dropTargets.forEach(target => {
+        target.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          target.classList.add('drop-zone-active');
+        });
+
+        target.addEventListener('dragleave', () => {
+          target.classList.remove('drop-zone-active');
+        });
+
+        target.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          target.classList.remove('drop-zone-active');
+          const zone = target.dataset.zone;
+          if (!draggedTaskId || !zone) return;
+
+          let updates = {};
+
+          if (['morning', 'afternoon', 'evening', 'backlog'].includes(zone)) {
+            updates = { time_slot: zone };
+          } else if (zone === 'matrix-do') {
+            updates = { time_slot: 'backlog', is_important: true, is_urgent: true };
+          } else if (zone === 'matrix-schedule') {
+            updates = { time_slot: 'backlog', is_important: true, is_urgent: false };
+          } else if (zone === 'matrix-delegate') {
+            updates = { time_slot: 'backlog', is_important: false, is_urgent: true };
+          } else if (zone === 'matrix-eliminate') {
+            updates = { time_slot: 'backlog', is_important: false, is_urgent: false };
+          }
+
+          await updateTask(draggedTaskId, updates);
+          draggedTaskId = null;
+        });
+      });
     }
 
     fetchTasks();
