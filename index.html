@@ -1,10 +1,15 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Task Flow | مدیریت هوشمند تسک‌ها</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
   <style>
@@ -13,55 +18,72 @@
       user-select: none; 
       -webkit-user-select: none; 
     }
-    .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); }
-    .drop-zone-active { border-color: #6366f1 !important; background-color: rgba(99, 102, 241, 0.15) !important; }
+    .glass { 
+      background: rgba(30, 41, 59, 0.7); 
+      backdrop-filter: blur(12px); 
+    }
+    .light .glass {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+    }
+    .drop-zone-active { 
+      border-color: #6366f1 !important; 
+      background-color: rgba(99, 102, 241, 0.15) !important; 
+    }
     .dragging { opacity: 0.4; }
-    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; }
-    /* مخفی کردن اسکرول بار نوار روزها */
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); cursor: pointer; }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen pb-12">
+<body class="bg-slate-100 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen pb-12 transition-colors duration-200">
 
   <div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
     
-    <!-- هدر -->
-    <header class="flex justify-between items-center border-b border-slate-800 pb-4">
-      <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">Task Flow</h1>
-      <span class="text-xs text-slate-400 bg-slate-900 px-3 py-1 rounded-full border border-slate-800" id="current-date-text">--/--/--</span>
+    <!-- هدر + دکمه لایت/دارک مود -->
+    <header class="flex justify-between items-center border-b border-slate-300 dark:border-slate-800 pb-4">
+      <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-cyan-500 bg-clip-text text-transparent">Task Flow</h1>
+      
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-slate-600 dark:text-slate-400 bg-slate-200 dark:bg-slate-900 px-3 py-1 rounded-full border border-slate-300 dark:border-slate-800" id="current-date-text">--/--/--</span>
+        
+        <!-- دکمه سوییچ تم -->
+        <button id="theme-toggle" type="button" class="p-2 rounded-xl bg-slate-200 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-800 hover:border-indigo-500 transition active:scale-95 touch-manipulation">
+          <span id="theme-icon">🌙</span>
+        </button>
+      </div>
     </header>
 
     <!-- ورودی سریع (Quick Add) -->
-    <section class="glass p-4 rounded-2xl border border-slate-800 shadow-xl">
+    <section class="glass p-4 rounded-2xl border border-slate-300 dark:border-slate-800 shadow-xl">
       <form id="quick-add-form" class="flex gap-2">
         <input 
           type="text" 
           id="task-input" 
-          placeholder="افزودن سریع تسک جدید (بدون تاریخ، ورود به غیرمهم/غیرفوری)..." 
+          placeholder="افزودن سریع تسک جدید..." 
           required 
-          class="flex-1 bg-slate-900/80 border border-slate-700/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition placeholder-slate-500 select-text"
+          class="flex-1 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700/60 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 transition placeholder-slate-400 dark:placeholder-slate-500 select-text"
         >
-        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-6 py-3 rounded-xl text-sm transition whitespace-nowrap">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-6 py-3 rounded-xl text-sm transition whitespace-nowrap active:scale-95 touch-manipulation">
           افزودن
         </button>
       </form>
     </section>
 
-    <!-- نوار انتخاب روز هفته (Week Bar) -->
-    <section class="glass p-3 rounded-2xl border border-slate-800/80 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-      <div id="week-days-container" class="flex items-center gap-2 flex-1 justify-between min-w-[500px]">
-        <!-- روزهای هفته از طریق JS اضافه می‌شوند -->
+    <!-- نوار انتخاب روز هفته با دکمه "همه" -->
+    <section class="glass p-3 rounded-2xl border border-slate-300 dark:border-slate-800/80 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+      <div id="week-days-container" class="flex items-center gap-2 flex-1 justify-between min-w-[550px]">
+        <!-- روزهای هفته + دکمه «همه» از طریق JS اضافه می‌شوند -->
       </div>
       
-      <div class="h-8 w-[1px] bg-slate-800 mx-1"></div>
+      <div class="h-8 w-[1px] bg-slate-300 dark:bg-slate-800 mx-1"></div>
 
-      <!-- تقویم برای انتخاب تاریخ‌های خارج از هفته جاری -->
+      <!-- تقویم برای تاریخ‌های خارج از هفته -->
       <div class="relative flex items-center shrink-0">
         <input 
           type="date" 
           id="custom-date-picker" 
-          class="bg-slate-900 border border-slate-700 text-slate-300 text-xs rounded-xl px-2.5 py-2 focus:outline-none focus:border-indigo-500 transition"
+          class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs rounded-xl px-2.5 py-2 focus:outline-none focus:border-indigo-500 transition"
           title="انتخاب تاریخ دیگر"
         >
       </div>
@@ -70,36 +92,36 @@
     <!-- برنامه‌ریزی روزانه -->
     <section class="space-y-4">
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-slate-200 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span> برنامه‌ریزی روزانه
-          <span class="text-xs font-normal text-cyan-400/80 bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-800/40" id="selected-date-label">امروز</span>
+        <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-cyan-500"></span> برنامه‌ریزی روزانه
+          <span class="text-xs font-normal text-cyan-600 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-300 dark:border-cyan-800/40" id="selected-date-label">امروز</span>
         </h2>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- صبح -->
-        <div class="glass border border-slate-800/80 rounded-2xl p-4 flex flex-col space-y-3">
-          <div class="flex justify-between items-center pb-2 border-b border-slate-800">
-            <span class="font-medium text-amber-400 text-sm">🌅 صبح</span>
-            <span class="text-xs bg-amber-400/10 text-amber-400 px-2 py-0.5 rounded" id="count-morning">0</span>
+        <div class="glass border border-slate-300 dark:border-slate-800/80 rounded-2xl p-4 flex flex-col space-y-3">
+          <div class="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800">
+            <span class="font-medium text-amber-600 dark:text-amber-400 text-sm">🌅 صبح</span>
+            <span class="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded font-bold" id="count-morning">0</span>
           </div>
           <div id="slot-morning" data-zone="morning" class="drop-target space-y-2 min-h-[120px] flex-1 rounded-xl p-1 transition border border-transparent"></div>
         </div>
 
         <!-- ظهر / عصر -->
-        <div class="glass border border-slate-800/80 rounded-2xl p-4 flex flex-col space-y-3">
-          <div class="flex justify-between items-center pb-2 border-b border-slate-800">
-            <span class="font-medium text-orange-400 text-sm">☀️ ظهر و عصر</span>
-            <span class="text-xs bg-orange-400/10 text-orange-400 px-2 py-0.5 rounded" id="count-afternoon">0</span>
+        <div class="glass border border-slate-300 dark:border-slate-800/80 rounded-2xl p-4 flex flex-col space-y-3">
+          <div class="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800">
+            <span class="font-medium text-orange-600 dark:text-orange-400 text-sm">☀️ ظهر و عصر</span>
+            <span class="text-xs bg-orange-500/10 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded font-bold" id="count-afternoon">0</span>
           </div>
           <div id="slot-afternoon" data-zone="afternoon" class="drop-target space-y-2 min-h-[120px] flex-1 rounded-xl p-1 transition border border-transparent"></div>
         </div>
 
         <!-- شب -->
-        <div class="glass border border-slate-800/80 rounded-2xl p-4 flex flex-col space-y-3">
-          <div class="flex justify-between items-center pb-2 border-b border-slate-800">
-            <span class="font-medium text-indigo-400 text-sm">🌙 شب</span>
-            <span class="text-xs bg-indigo-400/10 text-indigo-400 px-2 py-0.5 rounded" id="count-evening">0</span>
+        <div class="glass border border-slate-300 dark:border-slate-800/80 rounded-2xl p-4 flex flex-col space-y-3">
+          <div class="flex justify-between items-center pb-2 border-b border-slate-300 dark:border-slate-800">
+            <span class="font-medium text-indigo-600 dark:text-indigo-400 text-sm">🌙 شب</span>
+            <span class="text-xs bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded font-bold" id="count-evening">0</span>
           </div>
           <div id="slot-evening" data-zone="evening" class="drop-target space-y-2 min-h-[120px] flex-1 rounded-xl p-1 transition border border-transparent"></div>
         </div>
@@ -108,30 +130,28 @@
 
     <!-- ماتریس آیزنهاور -->
     <section class="space-y-4">
-      <h2 class="text-lg font-semibold text-slate-200 flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-indigo-400"></span> ماتریس آیزنهاور (مربوط به روز انتخاب‌شده + تسک‌های بدون تاریخ)
+      <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-indigo-500"></span> ماتریس آیزنهاور
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         
-        <div class="bg-red-950/20 border border-red-900/30 rounded-2xl p-4 space-y-3">
-          <span class="text-xs font-semibold text-red-400 tracking-wide uppercase">🔥 فوری و مهم</span>
+        <div class="bg-red-50/50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/30 rounded-2xl p-4 space-y-3">
+          <span class="text-xs font-semibold text-red-600 dark:text-red-400 tracking-wide uppercase">🔥 فوری و مهم</span>
           <div id="matrix-do" data-zone="matrix-do" class="drop-target space-y-2 min-h-[80px] rounded-xl p-1 transition"></div>
         </div>
 
-        <div class="bg-blue-950/20 border border-blue-900/30 rounded-2xl p-4 space-y-3">
-          <span class="text-xs font-semibold text-blue-400 tracking-wide uppercase">📅 غیرفوری و مهم</span>
+        <div class="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30 rounded-2xl p-4 space-y-3">
+          <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 tracking-wide uppercase">📅 غیرفوری و مهم</span>
           <div id="matrix-schedule" data-zone="matrix-schedule" class="drop-target space-y-2 min-h-[80px] rounded-xl p-1 transition"></div>
         </div>
 
-        <div class="bg-amber-950/20 border border-amber-900/30 rounded-2xl p-4 space-y-3">
-          <span class="text-xs font-semibold text-amber-400 tracking-wide uppercase">⚡ فوری و غیرمهم</span>
+        <div class="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-4 space-y-3">
+          <span class="text-xs font-semibold text-amber-600 dark:text-amber-400 tracking-wide uppercase">⚡ فوری و غیرمهم</span>
           <div id="matrix-delegate" data-zone="matrix-delegate" class="drop-target space-y-2 min-h-[80px] rounded-xl p-1 transition"></div>
         </div>
 
-        <div class="bg-slate-900/40 border border-slate-800 rounded-2xl p-4 space-y-3">
-          <div class="flex justify-between items-center">
-            <span class="text-xs font-semibold text-slate-400 tracking-wide uppercase">🗑️ غیرفوری و غیرمهم (ورودی اولیه / بدون تاریخ)</span>
-          </div>
+        <div class="bg-slate-200/50 dark:bg-slate-900/40 border border-slate-300 dark:border-slate-800 rounded-2xl p-4 space-y-3">
+          <span class="text-xs font-semibold text-slate-600 dark:text-slate-400 tracking-wide uppercase">🗑️ غیرفوری و غیرمهم (ورودی اولیه / بدون تاریخ)</span>
           <div id="matrix-eliminate" data-zone="matrix-eliminate" class="drop-target space-y-2 min-h-[80px] rounded-xl p-1 transition"></div>
         </div>
 
@@ -145,7 +165,31 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0a25weHdqenFnd3VldXdpdmdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzM4ODgsImV4cCI6MjEwMjU0OTg4OH0.GNGDRuH_dqqgD_oi7b2ZdYgcNGzbMxL8Iu3sX_r9BfQ';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // تابع کمکی برای فرمت YYYY-MM-DD با زمان محلی
+    // مدیریت تم (Dark / Light)
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+
+    function applyTheme(isDark) {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        themeIcon.innerText = '🌙';
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        themeIcon.innerText = '☀️';
+        localStorage.setItem('theme', 'light');
+      }
+    }
+
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    applyTheme(savedTheme === 'dark');
+
+    themeToggleBtn.addEventListener('click', () => {
+      const isDark = document.documentElement.classList.contains('dark');
+      applyTheme(!isDark);
+    });
+
+    // فرمت تاریخ
     function formatDateToYYYYMMDD(date) {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -154,21 +198,34 @@
     }
 
     const todayStr = formatDateToYYYYMMDD(new Date());
-    let selectedDateStr = todayStr;
+    let selectedDateStr = todayStr; // 'ALL' به معنای نمایش همه
     let allTasks = [];
     let draggedTaskId = null;
 
     document.getElementById('current-date-text').innerText = new Date().toLocaleDateString('fa-IR');
-    document.getElementById('custom-date-picker').value = selectedDateStr;
+    document.getElementById('custom-date-picker').value = todayStr;
 
-    // ۱. ساختن نوار هفته جاری (از شنبه تا جمعه)
+    // رندر نوار هفته با اضافه شدن دکمه "همه"
     function renderWeekBar() {
       const container = document.getElementById('week-days-container');
       container.innerHTML = '';
 
+      // دکمه «همه»
+      const allBtn = document.createElement('button');
+      allBtn.type = 'button';
+      allBtn.onclick = () => selectDate('ALL');
+      const isAllSelected = (selectedDateStr === 'ALL');
+      allBtn.className = `px-3 py-2 rounded-xl transition border text-xs font-semibold ${
+        isAllSelected 
+          ? 'bg-indigo-600 text-white border-indigo-500 shadow-md' 
+          : 'bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'
+      }`;
+      allBtn.innerText = 'همه';
+      container.appendChild(allBtn);
+
+      // محاسبه روزهای هفته جاری
       const now = new Date();
-      const currentDayOfWeek = now.getDay(); // 0: Sun, 1: Mon, ..., 6: Sat
-      // محاسبه فاصله تا شنبه (در تقویم ایران شنبه اول هفته است)
+      const currentDayOfWeek = now.getDay(); 
       const distanceToSaturday = (currentDayOfWeek + 1) % 7; 
 
       const saturday = new Date(now);
@@ -191,7 +248,7 @@
         btn.className = `flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-xl transition border text-xs ${
           isSelected 
             ? 'bg-indigo-600 text-white border-indigo-500 font-bold shadow-lg shadow-indigo-500/30' 
-            : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200'
+            : 'bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-700'
         }`;
 
         btn.innerHTML = `
@@ -204,26 +261,26 @@
       }
     }
 
-    // تغییر روز انتخاب‌شده
     function selectDate(dateStr) {
       selectedDateStr = dateStr;
-      document.getElementById('custom-date-picker').value = selectedDateStr;
-      
-      const d = new Date(dateStr + 'T00:00:00');
-      document.getElementById('selected-date-label').innerText = (dateStr === todayStr) 
-        ? 'امروز' 
-        : d.toLocaleDateString('fa-IR', { weekday: 'long', month: 'numeric', day: 'numeric' });
+      if (dateStr !== 'ALL') {
+        document.getElementById('custom-date-picker').value = selectedDateStr;
+        const d = new Date(dateStr + 'T00:00:00');
+        document.getElementById('selected-date-label').innerText = (dateStr === todayStr) 
+          ? 'امروز' 
+          : d.toLocaleDateString('fa-IR', { weekday: 'long', month: 'numeric', day: 'numeric' });
+      } else {
+        document.getElementById('selected-date-label').innerText = 'همه روزها';
+      }
 
       renderWeekBar();
       renderTasks();
     }
 
-    // تغییر تاریخ از تقویم دستی
     document.getElementById('custom-date-picker').addEventListener('change', (e) => {
       if (e.target.value) selectDate(e.target.value);
     });
 
-    // دریافت داده‌ها از Supabase
     async function fetchTasks() {
       const { data, error } = await _supabase
         .from('tasks')
@@ -236,7 +293,6 @@
       }
     }
 
-    // افزودن تسک جدید (بدون تاریخ -> task_date = null)
     document.getElementById('quick-add-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const input = document.getElementById('task-input');
@@ -250,7 +306,7 @@
           is_important: false, 
           is_urgent: false, 
           time_slot: 'backlog',
-          task_date: null // تسک جدید بدون تاریخ ذخیره می‌شود
+          task_date: null
         }]);
 
       if (!error) {
@@ -269,7 +325,6 @@
       fetchTasks();
     }
 
-    // رندر تسک‌ها بر اساس روز انتخاب‌شده
     function renderTasks() {
       const containers = ['slot-morning', 'slot-afternoon', 'slot-evening', 'matrix-do', 'matrix-schedule', 'matrix-delegate', 'matrix-eliminate'];
       containers.forEach(id => document.getElementById(id).innerHTML = '');
@@ -279,9 +334,11 @@
       allTasks.forEach(task => {
         const taskDate = task.task_date ? task.task_date.split('T')[0] : null;
 
-        // ۱. تسک‌های زمان‌بندی شده (صبح/ظهر/شب): فقط اگر تاریخشان با روز انتخاب‌شده یکسان باشد
+        // فیلتر بر اساس تاریخ انتخابی یا حالت "ALL"
+        const matchesDate = (selectedDateStr === 'ALL') || (taskDate === selectedDateStr);
+
         if (task.time_slot !== 'backlog') {
-          if (taskDate === selectedDateStr) {
+          if (matchesDate) {
             const container = document.getElementById(`slot-${task.time_slot}`);
             if (container) {
               container.appendChild(createCard(task));
@@ -289,9 +346,7 @@
             }
           }
         } 
-        // ۲. تسک‌های ماتریس آیزنهاور (زمان‌بندی نشده):
-        // شرط نمایش: یا بدون تاریخ باشند (taskDate === null) یا تاریخشان برابر روز انتخاب‌شده باشد
-        else if (taskDate === null || taskDate === selectedDateStr) {
+        else if (taskDate === null || matchesDate) {
           if (task.is_important && task.is_urgent) document.getElementById('matrix-do').appendChild(createCard(task));
           else if (task.is_important && !task.is_urgent) document.getElementById('matrix-schedule').appendChild(createCard(task));
           else if (!task.is_important && task.is_urgent) document.getElementById('matrix-delegate').appendChild(createCard(task));
@@ -306,35 +361,33 @@
       setupDragAndDrop();
     }
 
-    // ساخت کارت تسک
+    // ساخت کارت تک‌خطی فشرده
     function createCard(task) {
       const card = document.createElement('div');
       card.draggable = true;
       card.dataset.id = task.id;
-      card.className = `p-3 bg-slate-900 border ${task.is_completed ? 'border-emerald-900/40 opacity-50' : 'border-slate-800'} rounded-xl space-y-2 shadow-sm text-xs cursor-grab active:cursor-grabbing transition`;
+      card.className = `p-2.5 bg-white dark:bg-slate-900 border ${task.is_completed ? 'border-emerald-500/30 opacity-50' : 'border-slate-200 dark:border-slate-800'} rounded-xl shadow-sm text-xs cursor-grab active:cursor-grabbing transition hover:border-indigo-400 dark:hover:border-indigo-500 flex items-center justify-between gap-2`;
 
-      const formattedDate = task.task_date ? new Date(task.task_date + 'T00:00:00').toLocaleDateString('fa-IR', {month: 'numeric', day: 'numeric'}) : 'بدون تاریخ';
+      // فرمت تاریخ میلادی مختصر (مثلاً 18 Aug)
+      let dateDisplay = '';
+      if (task.task_date) {
+        const d = new Date(task.task_date + 'T00:00:00');
+        dateDisplay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
 
       card.innerHTML = `
-        <div class="flex items-center justify-between gap-2">
-          <span class="${task.is_completed ? 'line-through text-slate-500' : 'text-slate-200 font-medium'} flex-1 pointer-events-none">${task.title}</span>
-          <button onclick="deleteTask('${task.id}')" class="text-slate-600 hover:text-red-400 transition px-1">✕</button>
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          <span class="${task.is_completed ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-200 font-medium'} truncate pointer-events-none">${task.title}</span>
         </div>
-        <div class="flex items-center justify-between pt-1.5 border-t border-slate-800/80 text-[10px] text-slate-500">
-          <span>📅 ${formattedDate}</span>
-          <input 
-            type="date" 
-            value="${task.task_date ? task.task_date.split('T')[0] : ''}" 
-            onchange="updateTask('${task.id}', {task_date: this.value || null})"
-            class="bg-slate-950 border border-slate-800 text-slate-400 rounded px-1 py-0.5 text-[10px] focus:outline-none"
-            title="تغییر تاریخ تسک"
-          >
+        
+        <div class="flex items-center gap-2 shrink-0">
+          ${dateDisplay ? `<span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700/60">${dateDisplay}</span>` : ''}
+          <button onclick="deleteTask('${task.id}')" class="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition px-1 text-xs">✕</button>
         </div>
       `;
       return card;
     }
 
-    // منطق کشیدن و رها کردن (Drag & Drop)
     function setupDragAndDrop() {
       const cards = document.querySelectorAll('[draggable="true"]');
       const dropTargets = document.querySelectorAll('.drop-target');
@@ -368,13 +421,11 @@
           if (!draggedTaskId || !zone) return;
 
           let updates = {};
+          const effectiveDate = (selectedDateStr === 'ALL') ? todayStr : selectedDateStr;
 
-          // افتادن در برنامه‌ریزی روزانه -> زمان‌بندی روی بخش مربوطه و تنظیم تاریخ روی روزِ فعالِ نوار
           if (['morning', 'afternoon', 'evening'].includes(zone)) {
-            updates = { time_slot: zone, task_date: selectedDateStr };
-          } 
-          // افتادن در خانه‌های ماتریس آیزنهاور -> خروج از زمان‌بندی روزانه (تغییر time_slot به backlog)
-          else if (zone === 'matrix-eliminate') {
+            updates = { time_slot: zone, task_date: effectiveDate };
+          } else if (zone === 'matrix-eliminate') {
             updates = { time_slot: 'backlog', is_important: false, is_urgent: false };
           } else if (zone === 'matrix-do') {
             updates = { time_slot: 'backlog', is_important: true, is_urgent: true };
@@ -390,7 +441,6 @@
       });
     }
 
-    // اجرای اولیه
     renderWeekBar();
     fetchTasks();
   </script>
