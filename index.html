@@ -147,23 +147,24 @@
 
     // افزودن تسک جدید
     document.getElementById('quick-add-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const input = document.getElementById('task-input');
-      const title = input.value.trim();
-      if (!title) return;
+  e.preventDefault();
+  const input = document.getElementById('task-input');
+  const title = input.value.trim();
+  if (!title) return;
 
-      const { data, error } = await _supabase
-        .from('tasks')
-        .insert([{ title: title, is_important: false, is_urgent: false, time_slot: 'backlog' }]);
+  const { data, error } = await _supabase
+    .from('tasks')
+    .insert([{ title: title, is_important: false, is_urgent: false, time_slot: 'backlog' }]);
 
-      if (error) {
-        alert("خطا در ثبت تسک! مطمئن شوید کلید Anon را درست وارد کرده‌اید.");
-        console.error(error);
-      } else {
-        input.value = '';
-        fetchTasks();
-      }
-    });
+  if (error) {
+    // نمایش ارور واقعی دیتابیس یا شبکه
+    console.log("Supabase Full Error:", error);
+    alert("خطا: " + (error.message || error.hint || "مشکل اتصال/شبکه"));
+  } else {
+    input.value = '';
+    fetchTasks();
+  }
+});
 
     // آپدیت تسک
     async function updateTask(id, fields) {
