@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
   <title>Task Flow | مدیریت هوشمند تسک‌ها</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -18,7 +19,7 @@
       user-select: none; 
       -webkit-user-select: none; 
     }
-    /* پس‌زمینه آمولد مشکی مطلق برای تم تیره و سفید مطلق برای تم روشن */
+    
     html.dark body { background-color: #000000; color: #f8fafc; }
     html:not(.dark) body { background-color: #ffffff; color: #0f172a; }
 
@@ -48,14 +49,14 @@
 
   <div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
     
-    <!-- هدر + دکمه لایت/دارک مود -->
+    <!-- هدر -->
     <header class="flex justify-between items-center border-b border-slate-200 dark:border-zinc-800 pb-4">
       <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-cyan-500 bg-clip-text text-transparent">Task Flow</h1>
       
       <div class="flex items-center gap-3">
         <span class="text-xs text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-900 px-3 py-1 rounded-full border border-slate-200 dark:border-zinc-800" id="current-date-text">--/--/--</span>
         
-        <!-- دکمه سوییچ تم -->
+        <!-- دکمه دستی سوییچ تم -->
         <button id="theme-toggle" type="button" class="p-2 rounded-xl bg-slate-100 dark:bg-zinc-900 text-slate-700 dark:text-zinc-300 border border-slate-200 dark:border-zinc-800 hover:border-indigo-500 transition active:scale-95 touch-manipulation">
           <span id="theme-icon">🌙</span>
         </button>
@@ -102,7 +103,7 @@
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold text-slate-800 dark:text-zinc-100 flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-cyan-500"></span> برنامه‌ریزی روزانه
-          <span class="text-xs font-normal text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-200 dark:border-cyan-800/40" id="selected-date-label">امروز</span>
+          <span class="text-xs font-normal text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-200 dark:border-cyan-800/40" id="selected-date-label">همه روزها</span>
         </h2>
       </div>
 
@@ -173,7 +174,7 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0a25weHdqenFnd3VldXdpdmdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzM4ODgsImV4cCI6MjEwMjU0OTg4OH0.GNGDRuH_dqqgD_oi7b2ZdYgcNGzbMxL8Iu3sX_r9BfQ';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ۲. مدیریت هوشمند تم بر اساس سیستم‌عامل + ذخیره تغییرات دستی
+    // ۱. همگام‌سازی واقعی با تم سیستم‌عامل در تمام لحظات
     const themeToggleBtn = document.getElementById('theme-toggle');
     const themeIcon = document.getElementById('theme-icon');
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -188,30 +189,19 @@
       }
     }
 
-    function initTheme() {
-      const savedTheme = localStorage.getItem('theme');
-      if (savedTheme) {
-        applyTheme(savedTheme === 'dark');
-      } else {
-        applyTheme(mediaQuery.matches);
-      }
-    }
-
-    // گوش دادن به تغییر تم سیستم‌عامل در لحظه
+    // گوش به زنگ تغییر تم سیستم به محض تغییر در مک/آیفون/آیپد
     mediaQuery.addEventListener('change', (e) => {
-      if (!localStorage.getItem('theme')) {
-        applyTheme(e.matches);
-      }
+      applyTheme(e.matches);
     });
 
+    // اعمال تم بر اساس تم جاری سیستم‌عامل
+    applyTheme(mediaQuery.matches);
+
+    // دکمه تغییر تم دستی
     themeToggleBtn.addEventListener('click', () => {
       const isDark = document.documentElement.classList.contains('dark');
-      const newTheme = !isDark;
-      applyTheme(newTheme);
-      localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+      applyTheme(!isDark);
     });
-
-    initTheme();
 
     function formatDateToYYYYMMDD(date) {
       const year = date.getFullYear();
@@ -221,7 +211,9 @@
     }
 
     const todayStr = formatDateToYYYYMMDD(new Date());
-    let selectedDateStr = todayStr;
+    
+    // ۲. پیش‌فرض روی «همه» تنظیم شد
+    let selectedDateStr = 'ALL';
     let allTasks = [];
     let draggedTaskId = null;
 
@@ -274,7 +266,7 @@
         btn.innerHTML = `
           <span class="text-[10px] opacity-80">${weekDaysFa[i]}</span>
           <span class="text-sm font-semibold mt-0.5">${dayDate.getDate()}</span>
-          ${isToday ? '<span class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1"></span>' : '<span class="w-1.5 h-1.5 mt-1"></span>'}
+          ${isToday ? '<span class="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1" title="امروز"></span>' : '<span class="w-1.5 h-1.5 mt-1"></span>'}
         `;
 
         container.appendChild(btn);
@@ -345,6 +337,11 @@
       fetchTasks();
     }
 
+    // تغییر وضعیت دکمه‌های آیزنهاور با لمس
+    async function toggleTaskProperty(id, field, currentValue) {
+      await updateTask(id, { [field]: !currentValue });
+    }
+
     function renderTasks() {
       const containers = ['slot-morning', 'slot-afternoon', 'slot-evening', 'matrix-do', 'matrix-schedule', 'matrix-delegate', 'matrix-eliminate'];
       containers.forEach(id => document.getElementById(id).innerHTML = '');
@@ -379,6 +376,7 @@
       setupDragAndDrop();
     }
 
+    // ۳. افزودن دکمه‌های فوری (⚡) و مهم (🔥) در یک خط به کارت
     function createCard(task) {
       const card = document.createElement('div');
       card.draggable = true;
@@ -396,7 +394,33 @@
           <span class="${task.is_completed ? 'line-through text-slate-400 dark:text-zinc-500' : 'text-slate-800 dark:text-zinc-200 font-medium'} truncate pointer-events-none">${task.title}</span>
         </div>
         
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex items-center gap-1.5 shrink-0">
+          <!-- دکمه تک لمسی مهم -->
+          <button 
+            type="button" 
+            onclick="toggleTaskProperty('${task.id}', 'is_important', ${task.is_important})" 
+            title="مهم"
+            class="px-1.5 py-0.5 rounded text-[11px] border transition ${
+              task.is_important 
+                ? 'bg-red-500/10 border-red-500/40 text-red-600 dark:text-red-400 font-bold' 
+                : 'bg-slate-100 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-400 grayscale opacity-60 hover:opacity-100'
+            }">
+            🔥
+          </button>
+
+          <!-- دکمه تک لمسی فوری -->
+          <button 
+            type="button" 
+            onclick="toggleTaskProperty('${task.id}', 'is_urgent', ${task.is_urgent})" 
+            title="فوری"
+            class="px-1.5 py-0.5 rounded text-[11px] border transition ${
+              task.is_urgent 
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold' 
+                : 'bg-slate-100 dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-400 grayscale opacity-60 hover:opacity-100'
+            }">
+            ⚡
+          </button>
+
           ${dateDisplay ? `<span class="text-[10px] text-slate-500 dark:text-zinc-400 font-mono bg-slate-200/60 dark:bg-zinc-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-zinc-700/60">${dateDisplay}</span>` : ''}
           <button onclick="deleteTask('${task.id}')" class="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition px-1 text-xs">✕</button>
         </div>
