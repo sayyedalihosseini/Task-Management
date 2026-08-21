@@ -4,19 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
-  <!-- تنظیم آیکون اختصاصی برای آیفون، آیپد و مک -->
-<link rel="apple-touch-icon" href="icon.png">
-<link rel="icon" type="image/png" href="icon.png">
-
-<!-- قابلیت اجرا به‌صورت اپلیکیشن مستقل (بدون نوار مرورگر Safari) -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Task Flow">
-
-<!-- لینک به فایل Manifest برای پشتیبانی کامل PWA -->
-<link rel="manifest" href="manifest.json">
-
   <title>Task Flow | مدیریت هوشمند تسک‌ها</title>
+  
+  <!-- PWA Meta Tags -->
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="icon" type="image/png" href="icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Task Flow">
+  <link rel="manifest" href="manifest.json">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -110,16 +107,25 @@
       </div>
     </section>
 
-    <!-- برنامه‌ریزی روزانه -->
+    <!-- برنامه‌ریزی روزانه (Collapsible) -->
     <section class="space-y-4">
-      <div class="flex items-center justify-between">
+      <div 
+        id="daily-section-header" 
+        class="flex items-center justify-between cursor-pointer select-none p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-900/50 transition"
+        onclick="toggleDailySection()"
+      >
         <h2 class="text-lg font-semibold text-slate-800 dark:text-zinc-100 flex items-center gap-2">
           <span class="w-2 h-2 rounded-full bg-cyan-500"></span> برنامه‌ریزی روزانه
           <span class="text-xs font-normal text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-200 dark:border-cyan-800/40" id="selected-date-label">همه روزها</span>
         </h2>
+        
+        <div class="flex items-center gap-2 text-xs text-slate-400 dark:text-zinc-500">
+          <span id="daily-collapse-status">بسته</span>
+          <span id="daily-collapse-icon" class="transition-transform duration-200 text-sm">▼</span>
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div id="daily-section-content" class="grid grid-cols-1 md:grid-cols-3 gap-4 hidden">
         <!-- صبح -->
         <div class="glass-panel rounded-2xl p-4 flex flex-col space-y-3 shadow-sm">
           <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-zinc-800/80">
@@ -186,7 +192,7 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF0a25weHdqenFnd3VldXdpdmdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5NzM4ODgsImV4cCI6MjEwMjU0OTg4OH0.GNGDRuH_dqqgD_oi7b2ZdYgcNGzbMxL8Iu3sX_r9BfQ';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ۱. همگام‌سازی واقعی با تم سیستم‌عامل در تمام لحظات
+    // مدیریت تم
     const themeToggleBtn = document.getElementById('theme-toggle');
     const themeIcon = document.getElementById('theme-icon');
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
@@ -201,15 +207,9 @@
       }
     }
 
-    // گوش به زنگ تغییر تم سیستم به محض تغییر در مک/آیفون/آیپد
-    mediaQuery.addEventListener('change', (e) => {
-      applyTheme(e.matches);
-    });
-
-    // اعمال تم بر اساس تم جاری سیستم‌عامل
+    mediaQuery.addEventListener('change', (e) => applyTheme(e.matches));
     applyTheme(mediaQuery.matches);
 
-    // دکمه تغییر تم دستی
     themeToggleBtn.addEventListener('click', () => {
       const isDark = document.documentElement.classList.contains('dark');
       applyTheme(!isDark);
@@ -223,14 +223,38 @@
     }
 
     const todayStr = formatDateToYYYYMMDD(new Date());
-    
-    // ۲. پیش‌فرض روی «همه» تنظیم شد
     let selectedDateStr = 'ALL';
     let allTasks = [];
     let draggedTaskId = null;
+    let isDailyUserToggled = false; // جهت تشخیص مداخلۀ دستی کاربر در باز/بست کردن
 
     document.getElementById('current-date-text').innerText = new Date().toLocaleDateString('fa-IR');
     document.getElementById('custom-date-picker').value = todayStr;
+
+    function toggleDailySection(forceState = null) {
+      const content = document.getElementById('daily-section-content');
+      const icon = document.getElementById('daily-collapse-icon');
+      const statusText = document.getElementById('daily-collapse-status');
+      
+      const shouldExpand = forceState !== null ? forceState : content.classList.contains('hidden');
+
+      if (shouldExpand) {
+        content.classList.remove('hidden');
+        icon.style.transform = 'rotate(180deg)';
+        statusText.innerText = 'باز';
+      } else {
+        content.classList.add('hidden');
+        icon.style.transform = 'rotate(0deg)';
+        statusText.innerText = 'بسته';
+      }
+    }
+
+    // باز/بست کردن با کلیک کاربر
+    document.getElementById('daily-section-header').onclick = () => {
+      isDailyUserToggled = true;
+      const content = document.getElementById('daily-section-content');
+      toggleDailySection(content.classList.contains('hidden'));
+    };
 
     function renderWeekBar() {
       const container = document.getElementById('week-days-container');
@@ -287,6 +311,7 @@
 
     function selectDate(dateStr) {
       selectedDateStr = dateStr;
+      isDailyUserToggled = false; // بازنشانی حالت دستی هنگام تغییر تاریخ
       if (dateStr !== 'ALL') {
         document.getElementById('custom-date-picker').value = selectedDateStr;
         const d = new Date(dateStr + 'T00:00:00');
@@ -349,7 +374,6 @@
       fetchTasks();
     }
 
-    // تغییر وضعیت دکمه‌های آیزنهاور با لمس
     async function toggleTaskProperty(id, field, currentValue) {
       await updateTask(id, { [field]: !currentValue });
     }
@@ -385,10 +409,19 @@
       document.getElementById('count-afternoon').innerText = counts.afternoon;
       document.getElementById('count-evening').innerText = counts.evening;
 
+      // مدیریت اتوماتیک باز/بسته بودن برنامه‌ریزی روزانه
+      const totalDailyTasks = counts.morning + counts.afternoon + counts.evening;
+      if (!isDailyUserToggled) {
+        if (totalDailyTasks === 0) {
+          toggleDailySection(false); // اگر خالی بود بسته شود
+        } else {
+          toggleDailySection(true);  // اگر تسکی داشت باز شود
+        }
+      }
+
       setupDragAndDrop();
     }
 
-    // ۳. افزودن دکمه‌های فوری (⚡) و مهم (🔥) در یک خط به کارت
     function createCard(task) {
       const card = document.createElement('div');
       card.draggable = true;
@@ -407,7 +440,6 @@
         </div>
         
         <div class="flex items-center gap-1.5 shrink-0">
-          <!-- دکمه تک لمسی مهم -->
           <button 
             type="button" 
             onclick="toggleTaskProperty('${task.id}', 'is_important', ${task.is_important})" 
@@ -420,7 +452,6 @@
             🔥
           </button>
 
-          <!-- دکمه تک لمسی فوری -->
           <button 
             type="button" 
             onclick="toggleTaskProperty('${task.id}', 'is_urgent', ${task.is_urgent})" 
